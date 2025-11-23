@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <meta charset="utf-8">
+        <title>2D Fluid Particles - WebGPU</title>
+
+        <meta name="description" content="Real-time particle-based 2D fluid simulation and rendering using WebGPU.">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+        <link href='https://fonts.googleapis.com/css?family=Asap:400,700' rel='stylesheet' type='text/css'>
+        <link rel="stylesheet" href="flip.css"/>
+    </head>
+
+    <body>
+        <script type="text/template" id="main">
+            <style>
+                .editing-ui {
+                    display: none;
+                }
+
+                .simulating-ui {
+                    display: none;
+                }
+                
+                .performance-ui {
+                    margin-top: 10px;
+                }
+            </style>
+
+            <canvas id="canvas" width="1920" height="1080"></canvas>
+            
+            <div id="ui">
+                <div id="start-button">Start</div>
+
+                <div id="preset-button" class="editing-ui">Random Preset</div>
+
+                <div class="slider-label editing-ui">Particle Density</div>
+                <div id="density-slider" class="slider editing-ui"></div>
+
+                <div class="slider-label editing-ui">Particle Count</div>
+                <div id="particle-count-slider" class="slider editing-ui"></div>
+
+                <div id="particle-count" class="editing-ui"></div>
+
+                <div class="slider-label simulating-ui">Fluidity</div>
+                <div id="fluidity-slider" class="slider simulating-ui"></div>
+
+                <div class="slider-label simulating-ui">Speed</div>
+                <div id="speed-slider" class="slider simulating-ui"></div>
+                
+                <div id="render-mode-toggle" class="simulating-ui" style="margin-top: 10px; cursor: pointer; padding: 8px; background: rgba(255,255,255,0.1); border-radius: 4px; text-align: center;">
+                    Mode: Circles
+                </div>
+                
+                <div class="slider-label performance-ui simulating-ui">Grid Resolution</div>
+                <div id="grid-resolution-slider" class="slider performance-ui simulating-ui"></div>
+            </div>
+
+
+            <div class="instructions editing-ui">
+                <span>Drag</span> to pan camera <br/>
+                <span>Scroll</span> to zoom in and out <br/>
+                <br/>
+                <span>Click and drag</span> to create boxes <br/>
+                <span>Drag boxes</span> to move them <br/>
+                <span>Delete/Backspace</span> to remove hovered box <br/>
+            </div>
+
+            <div class="instructions simulating-ui">
+                <span>Drag</span> to pan camera<br/>
+                <span>Scroll</span> to zoom in and out <br/>
+                <span>Toggle rendering mode</span> between circles and metaballs
+            </div>
+
+            <div id="footer">
+               2D WebGPU Fluid Simulation | <a href="https://github.com/azzamunza/fluid2D-dynamics">Code</a>  
+            </div>
+        </script>
+
+        <script type="text/template" id="no-support">
+            <div id="container">
+                <div id="error"></div>
+                <div id="info" style="color: white; padding: 20px; text-align: center;">
+                    <p>This simulation requires WebGPU support.</p>
+                    <p>WebGPU is available in:</p>
+                    <ul style="list-style: none; padding: 0;">
+                        <li>Chrome/Edge 113+ (enable chrome://flags/#enable-unsafe-webgpu if needed)</li>
+                        <li>Firefox Nightly (enable dom.webgpu.enabled in about:config)</li>
+                        <li>Safari Technology Preview</li>
+                    </ul>
+                    <p>For best performance on mobile, use Chrome on Samsung S24 ULTRA or similar flagship devices.</p>
+                </div>
+                <div id="linkback"><a href="http://david.li">Original 3D version by david.li</a></div>
+            </div>
+        </script>
+
+
+        <div id="placeholder"></div>
+
+
+        <script src="webgpu.js"></script>
+        <script src="utilities.js"></script>
+        <script src="camera2d.js"></script>
+        <script src="boxeditor2d.js"></script>
+        <script src="simulator2d.js"></script>
+        <script src="renderer2d.js"></script>
+        <script src="slider.js"></script>
+        <script src="fluidparticles2d.js"></script>
+
+        <script>
+            // Check WebGPU support
+            WebGPUContext.checkWebGPUSupportWithCallback(
+                function () { // we have WebGPU
+                    document.getElementById('placeholder').outerHTML = document.getElementById('main').innerHTML;
+                    var fluidBox = new FluidParticles2D();
+                }, 
+                function (error) { // WebGPU not supported
+                    document.getElementById('placeholder').outerHTML = document.getElementById('no-support').innerHTML;
+                    document.getElementById('error').textContent = 'WebGPU not supported: ' + error;
+                }
+            );
+        </script>
+    </body>
+
+</html>
