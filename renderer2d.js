@@ -171,12 +171,18 @@ var Renderer2D = (function () {
                 var velocitySum = vec2<f32>(0.0, 0.0);
                 
                 // Calculate metaball field
+                // NOTE: This is expensive for high particle counts (O(n) per pixel)
+                // For better performance, use spatial hashing or reduce particle count
+                let maxInfluenceRadius = 1.0;
+                let maxInfluenceRadiusSq = maxInfluenceRadius * maxInfluenceRadius;
+                
                 for (var i: u32 = 0u; i < arrayLength(&particles); i = i + 1u) {
                     let particle = particles[i];
                     let diff = worldPos - particle.position.xy;
                     let distSq = dot(diff, diff);
                     
-                    if (distSq < 1.0) {
+                    // Only process nearby particles
+                    if (distSq < maxInfluenceRadiusSq) {
                         let influence = 1.0 / (distSq + 0.01);
                         sum = sum + influence;
                         

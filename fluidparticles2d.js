@@ -128,8 +128,12 @@ var FluidParticles2D = (function () {
         // Parameters
         this.gridCellDensity = 1.0;
         this.timeStep = 1.0 / 60.0;
-        this.particleCount = 160000;
-        this.maxParticleCount = 300000;
+        
+        // Particle count limits
+        this.DEFAULT_PARTICLE_COUNT = 160000;
+        this.MIN_PARTICLE_COUNT = 10000;
+        this.MAX_PARTICLE_COUNT = 300000;
+        this.particleCount = this.DEFAULT_PARTICLE_COUNT;
         
         // Density slider
         this.densitySlider = new Slider(
@@ -166,7 +170,7 @@ var FluidParticles2D = (function () {
         this.particleCountSlider = new Slider(
             document.getElementById('particle-count-slider'),
             this.particleCount,
-            10000, this.maxParticleCount,
+            this.MIN_PARTICLE_COUNT, this.MAX_PARTICLE_COUNT,
             function(value) {
                 this.particleCount = Math.round(value);
                 this.redrawUI();
@@ -367,13 +371,16 @@ var FluidParticles2D = (function () {
         var fractionFilled = totalArea / (GRID_WIDTH * GRID_HEIGHT);
         var desiredParticleCount = fractionFilled * gridResolutionX * gridResolutionY * PARTICLES_PER_CELL;
         
-        return Math.min(desiredParticleCount, this.maxParticleCount);
+        return Math.min(desiredParticleCount, this.MAX_PARTICLE_COUNT);
     };
     
     FluidParticles2D.prototype.startSimulation = function() {
         this.state = State.SIMULATING;
         
-        var particleCount = this.particleCount || this.getParticleCount();
+        var particleCount = Math.min(
+            this.particleCount || this.getParticleCount(),
+            this.MAX_PARTICLE_COUNT
+        );
         var particlesWidth = 512;
         var particlesHeight = Math.ceil(particleCount / particlesWidth);
         particleCount = particlesWidth * particlesHeight;

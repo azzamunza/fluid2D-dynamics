@@ -70,7 +70,7 @@ var Simulator2D = (function () {
             @compute @workgroup_size(64)
             fn main(@builtin(global_invocation_id) global_id: vec3<u32>) {
                 let index = global_id.x;
-                if (index >= uniforms.particleCount) {
+                if (index >= u32(uniforms.particleCount)) {
                     return;
                 }
                 

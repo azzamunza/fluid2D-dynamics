@@ -8,7 +8,7 @@ var WebGPUContext = (function () {
         }
         
         const adapter = await navigator.gpu.requestAdapter({
-            powerPreference: 'high-performance' // Best for Samsung S24 ULTRA
+            powerPreference: 'high-performance' // Request high-performance adapter for better GPU utilization
         });
         
         if (!adapter) {
