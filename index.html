@@ -2,9 +2,10 @@
 <html>
     <head>
         <meta charset="utf-8">
-        <title>Fluid Particles</title>
+        <title>2D Fluid Particles - WebGPU</title>
 
-        <meta name="description" content="Real-time particle-based 3D fluid simulation and rendering using WebGL.">
+        <meta name="description" content="Real-time particle-based 2D fluid simulation and rendering using WebGPU.">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
         <link href='https://fonts.googleapis.com/css?family=Asap:400,700' rel='stylesheet' type='text/css'>
         <link rel="stylesheet" href="flip.css"/>
@@ -20,6 +21,10 @@
                 .simulating-ui {
                     display: none;
                 }
+                
+                .performance-ui {
+                    margin-top: 10px;
+                }
             </style>
 
             <canvas id="canvas" width="1920" height="1080"></canvas>
@@ -32,6 +37,9 @@
                 <div class="slider-label editing-ui">Particle Density</div>
                 <div id="density-slider" class="slider editing-ui"></div>
 
+                <div class="slider-label editing-ui">Particle Count</div>
+                <div id="particle-count-slider" class="slider editing-ui"></div>
+
                 <div id="particle-count" class="editing-ui"></div>
 
                 <div class="slider-label simulating-ui">Fluidity</div>
@@ -39,36 +47,50 @@
 
                 <div class="slider-label simulating-ui">Speed</div>
                 <div id="speed-slider" class="slider simulating-ui"></div>
+                
+                <div id="render-mode-toggle" class="simulating-ui" style="margin-top: 10px; cursor: pointer; padding: 8px; background: rgba(255,255,255,0.1); border-radius: 4px; text-align: center;">
+                    Mode: Circles
+                </div>
+                
+                <div class="slider-label performance-ui simulating-ui">Grid Resolution</div>
+                <div id="grid-resolution-slider" class="slider performance-ui simulating-ui"></div>
             </div>
 
 
             <div class="instructions editing-ui">
-                <span>Space + drag</span> to rotate camera <br/>
+                <span>Drag</span> to pan camera <br/>
                 <span>Scroll</span> to zoom in and out <br/>
                 <br/>
-                <span>Draw on walls</span> to create new boxes <br/>
-                <span>Drag box faces</span> to resize <br/>
-                <span>Shift + drag box faces</span> to translate <br/>
+                <span>Click and drag</span> to create boxes <br/>
+                <span>Drag boxes</span> to move them <br/>
+                <span>Delete/Backspace</span> to remove hovered box <br/>
             </div>
 
             <div class="instructions simulating-ui">
-                <span>Drag</span> to rotate camera<br/>
+                <span>Drag</span> to pan camera<br/>
                 <span>Scroll</span> to zoom in and out <br/>
-                <span>Move mouse</span> to push particles
+                <span>Toggle rendering mode</span> between circles and metaballs
             </div>
 
             <div id="footer">
-               <a href="http://david.li">david.li</a> | <a href="https://youtu.be/DhNt_A3k4B4">Video</a> | <a href="https://github.com/dli/fluid">Code</a>  
+               2D WebGPU Fluid Simulation | <a href="https://github.com/azzamunza/fluid2D-dynamics">Code</a>  
             </div>
         </script>
 
         <script type="text/template" id="no-support">
             <div id="container">
                 <div id="error"></div>
-                <div id="video">You can still view a video.<br/>
-                    <iframe width="854" height="480" style="margin-top: 7px;" src="https://www.youtube.com/embed/DhNt_A3k4B4" frameborder="0" allowfullscreen></iframe> 
+                <div id="info" style="color: white; padding: 20px; text-align: center;">
+                    <p>This simulation requires WebGPU support.</p>
+                    <p>WebGPU is available in:</p>
+                    <ul style="list-style: none; padding: 0;">
+                        <li>Chrome/Edge 113+ (enable chrome://flags/#enable-unsafe-webgpu if needed)</li>
+                        <li>Firefox Nightly (enable dom.webgpu.enabled in about:config)</li>
+                        <li>Safari Technology Preview</li>
+                    </ul>
+                    <p>For best performance on mobile, use Chrome on Samsung S24 ULTRA or similar flagship devices.</p>
                 </div>
-                <div id="linkback"><a href="http://david.li">david.li</a></div>
+                <div id="linkback"><a href="http://david.li">Original 3D version by david.li</a></div>
             </div>
         </script>
 
@@ -76,46 +98,25 @@
         <div id="placeholder"></div>
 
 
-        <script src="wrappedgl.js"></script>
+        <script src="webgpu.js"></script>
         <script src="utilities.js"></script>
-        <script src="camera.js"></script>
-        <script src="boxeditor.js"></script>
-        <script src="simulator.js"></script>
-        <script src="renderer.js"></script>
-        <script src="simulatorrenderer.js"></script>
+        <script src="camera2d.js"></script>
+        <script src="boxeditor2d.js"></script>
+        <script src="simulator2d.js"></script>
+        <script src="renderer2d.js"></script>
         <script src="slider.js"></script>
-        <script src="fluidparticles.js"></script>
+        <script src="fluidparticles2d.js"></script>
 
         <script>
-            function concatenateWords (list) {
-                if (list.length === 0) {
-                    return '';
-                } else if (list.length === 1) {
-                    return "'" + list[0] + "'";
-                } else {
-                    var result = '';
-                    for (var i = 0; i < list.length; ++i) {
-                        result += "'" + list[i] + "'";
-                        if (i < list.length - 1) {
-                            result += i < list.length - 2 ? ', ' : ' and '
-                        }
-                    }
-
-                    return result;
-                }
-            }
-
-            WrappedGL.checkWebGLSupportWithExtensions(['ANGLE_instanced_arrays', 'WEBGL_depth_texture', 'OES_texture_float', 'OES_texture_float_linear', 'OES_texture_half_float', 'OES_texture_half_float_linear'],
-                function () { //we have webgl
+            // Check WebGPU support
+            WebGPUContext.checkWebGPUSupportWithCallback(
+                function () { // we have WebGPU
                     document.getElementById('placeholder').outerHTML = document.getElementById('main').innerHTML;
-                    var fluidBox = new FluidParticles();
-                }, function (hasWebGL, unsupportedExtensions) {
+                    var fluidBox = new FluidParticles2D();
+                }, 
+                function (error) { // WebGPU not supported
                     document.getElementById('placeholder').outerHTML = document.getElementById('no-support').innerHTML;
-                    if (!hasWebGL) { //webgl not supported
-                        document.getElementById('error').textContent = 'Unfortunately, your browser does not support WebGL';
-                    } else {
-                        document.getElementById('error').textContent = 'Unfortunately, your browser does not support the ' + concatenateWords(unsupportedExtensions) + " WebGL extension" + (unsupportedExtensions.length > 1 ? 's.' : '.');
-                    }
+                    document.getElementById('error').textContent = 'WebGPU not supported: ' + error;
                 }
             );
         </script>
