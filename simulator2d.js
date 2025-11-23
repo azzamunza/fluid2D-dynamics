@@ -43,16 +43,83 @@ var Simulator2D = (function () {
     }
     
     Simulator2D.prototype.initializeComputeShaders = function(onLoaded) {
-        // We'll initialize compute shaders for:
-        // 1. Transfer particles to grid
-        // 2. Apply forces
-        // 3. Compute divergence
-        // 4. Pressure solve (Jacobi iterations)
-        // 5. Subtract pressure gradient
-        // 6. Transfer grid velocities back to particles
-        // 7. Advect particles
+        // Simple advection shader for basic particle movement
+        const advectShaderCode = `
+            struct Uniforms {
+                gridWidth: f32,
+                gridHeight: f32,
+                deltaTime: f32,
+                frameNumber: u32,
+                particleCount: u32,
+                padding: vec3<f32>,
+            }
+            
+            struct Particle {
+                position: vec4<f32>,
+            }
+            
+            struct Velocity {
+                velocity: vec4<f32>,
+            }
+            
+            @group(0) @binding(0) var<uniform> uniforms: Uniforms;
+            @group(0) @binding(1) var<storage, read> positionsIn: array<Particle>;
+            @group(0) @binding(2) var<storage, read_write> positionsOut: array<Particle>;
+            @group(0) @binding(3) var<storage, read_write> velocities: array<Velocity>;
+            
+            @compute @workgroup_size(64)
+            fn main(@builtin(global_invocation_id) global_id: vec3<u32>) {
+                let index = global_id.x;
+                if (index >= uniforms.particleCount) {
+                    return;
+                }
+                
+                let pos = positionsIn[index].position.xy;
+                var vel = velocities[index].velocity.xy;
+                
+                // Apply gravity
+                vel.y = vel.y - 9.8 * uniforms.deltaTime;
+                
+                // Simple damping
+                vel = vel * 0.999;
+                
+                // Advect position
+                var newPos = pos + vel * uniforms.deltaTime;
+                
+                // Boundary conditions - bounce off walls
+                if (newPos.x < 0.1) {
+                    newPos.x = 0.1;
+                    vel.x = abs(vel.x) * 0.5;
+                }
+                if (newPos.x > uniforms.gridWidth - 0.1) {
+                    newPos.x = uniforms.gridWidth - 0.1;
+                    vel.x = -abs(vel.x) * 0.5;
+                }
+                if (newPos.y < 0.1) {
+                    newPos.y = 0.1;
+                    vel.y = abs(vel.y) * 0.5;
+                }
+                if (newPos.y > uniforms.gridHeight - 0.1) {
+                    newPos.y = uniforms.gridHeight - 0.1;
+                    vel.y = -abs(vel.y) * 0.5;
+                }
+                
+                positionsOut[index].position = vec4<f32>(newPos, 0.0, 1.0);
+                velocities[index].velocity = vec4<f32>(vel, 0.0, 0.0);
+            }
+        `;
         
-        // For now, mark as loaded - we'll implement shaders progressively
+        this.advectShaderModule = this.device.createShaderModule({
+            code: advectShaderCode,
+            label: 'Advect Shader'
+        });
+        
+        // Create uniform buffer for compute shaders
+        this.computeUniformBuffer = this.gpu.createBuffer(
+            64, // Enough for uniforms
+            GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST
+        );
+        
         if (onLoaded) {
             setTimeout(onLoaded, 0);
         }
@@ -137,23 +204,76 @@ var Simulator2D = (function () {
     };
     
     Simulator2D.prototype.simulate = function(timeStep, mouseVelocity, mouseRayOrigin, mouseRayDirection) {
-        if (!this.particlePositionBuffer) {
+        if (!this.particlePositionBuffer || !this.advectShaderModule) {
             return; // Not initialized yet
         }
         
-        // For now, just increment frame number
-        // Full simulation will be implemented with compute shaders
         this.frameNumber++;
         
-        // TODO: Implement full 2D FLIP/PIC simulation using WebGPU compute shaders
-        // 1. Clear grid
-        // 2. Transfer particle velocities to grid
-        // 3. Apply external forces (gravity, mouse interaction)
-        // 4. Compute divergence
-        // 5. Solve pressure (Jacobi iterations)
-        // 6. Subtract pressure gradient
-        // 7. Transfer grid velocities to particles
-        // 8. Advect particles
+        // Create compute pipeline if needed
+        if (!this.advectPipeline) {
+            this.advectPipeline = this.device.createComputePipeline({
+                label: 'Advect Pipeline',
+                layout: 'auto',
+                compute: {
+                    module: this.advectShaderModule,
+                    entryPoint: 'main'
+                }
+            });
+        }
+        
+        // Create bind group if needed
+        if (!this.computeBindGroup) {
+            this.computeBindGroup = this.device.createBindGroup({
+                layout: this.advectPipeline.getBindGroupLayout(0),
+                entries: [
+                    { binding: 0, resource: { buffer: this.computeUniformBuffer } },
+                    { binding: 1, resource: { buffer: this.particlePositionBuffer } },
+                    { binding: 2, resource: { buffer: this.particlePositionBufferTemp } },
+                    { binding: 3, resource: { buffer: this.particleVelocityBuffer } },
+                ],
+            });
+        }
+        
+        // Update uniforms
+        const uniformData = new Float32Array(16);
+        uniformData[0] = this.gridWidth;
+        uniformData[1] = this.gridHeight;
+        uniformData[2] = timeStep;
+        uniformData[3] = this.frameNumber;
+        uniformData[4] = this.particleCount;
+        this.gpu.writeBuffer(this.computeUniformBuffer, uniformData);
+        
+        // Run compute shader
+        const commandEncoder = this.gpu.createCommandEncoder();
+        const passEncoder = commandEncoder.beginComputePass();
+        
+        passEncoder.setPipeline(this.advectPipeline);
+        passEncoder.setBindGroup(0, this.computeBindGroup);
+        
+        const workgroupCount = Math.ceil(this.particleCount / 64);
+        passEncoder.dispatchWorkgroups(workgroupCount);
+        
+        passEncoder.end();
+        
+        // Copy temp buffer back to main buffer
+        commandEncoder.copyBufferToBuffer(
+            this.particlePositionBufferTemp,
+            0,
+            this.particlePositionBuffer,
+            0,
+            this.particleCount * 16
+        );
+        
+        this.gpu.submitCommands(commandEncoder.finish());
+        
+        // Swap buffers
+        const tempPos = this.particlePositionBuffer;
+        this.particlePositionBuffer = this.particlePositionBufferTemp;
+        this.particlePositionBufferTemp = tempPos;
+        
+        // Mark bind group for recreation with swapped buffers
+        this.computeBindGroup = null;
     };
     
     Simulator2D.prototype.applyForce = function(force) {

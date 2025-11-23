@@ -443,6 +443,11 @@ var FluidParticles2D = (function () {
             this.boxEditor.draw();
         } else if (this.state === State.SIMULATING) {
             this.simulator.simulate(this.timeStep, null, null, null);
+            // Update renderer with potentially swapped buffers
+            this.renderer.updateParticleBuffers(
+                this.simulator.particlePositionBuffer,
+                this.simulator.particleVelocityBuffer
+            );
             this.renderer.render();
         }
     };

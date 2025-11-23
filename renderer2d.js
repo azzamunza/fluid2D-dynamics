@@ -233,6 +233,15 @@ var Renderer2D = (function () {
         this.bindGroup = null; // Force bind group recreation
     };
     
+    Renderer2D.prototype.updateParticleBuffers = function(positionBuffer, velocityBuffer) {
+        if (this.particlePositionBuffer !== positionBuffer || 
+            this.particleVelocityBuffer !== velocityBuffer) {
+            this.particlePositionBuffer = positionBuffer;
+            this.particleVelocityBuffer = velocityBuffer;
+            this.bindGroup = null; // Force bind group recreation
+        }
+    };
+    
     Renderer2D.prototype.createRenderPipeline = function() {
         const isCircleMode = this.renderMode === RenderMode.CIRCLES;
         
