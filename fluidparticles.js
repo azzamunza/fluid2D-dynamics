@@ -117,11 +117,13 @@ var FluidParticles = (function () {
                 this.redrawUI();
             }).bind(this));
 
-            this.flipnessSlider = new Slider(document.getElementById('fluidity-slider'), this.simulatorRenderer.simulator.flipness, 0.5, 0.99, (function (value) {
+            // Fluidity slider: range doubled (was 0.5-0.99, now 0.0-0.99)
+            this.flipnessSlider = new Slider(document.getElementById('fluidity-slider'), this.simulatorRenderer.simulator.flipness, 0.0, 0.99, (function (value) {
                 this.simulatorRenderer.simulator.flipness = value;
             }).bind(this));
 
-            this.speedSlider = new Slider(document.getElementById('speed-slider'), this.timeStep, 0.0, 1.0 / 60.0, (function (value) {
+            // Speed slider: max range doubled (was 1/60, now 2/60 = 1/30)
+            this.speedSlider = new Slider(document.getElementById('speed-slider'), this.timeStep, 0.0, 2.0 / 60.0, (function (value) {
                 this.timeStep = value;
             }).bind(this));
 
