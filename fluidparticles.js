@@ -336,7 +336,8 @@ var FluidParticles = (function () {
             for (var j = 0; j < particlesInBox; ++j) {
                 var position = box.randomPoint();
                 particlePositions.push(position);
-                // Fluid type: 0 for first box (blue), 1 for second box (white)
+                // Fluid type: 0 for first box (blue, full density), 1 for other boxes (white, half density)
+                // This creates two distinct fluid types for visual differentiation
                 particleTypes.push(i === 0 ? 0.0 : 1.0);
             }
 

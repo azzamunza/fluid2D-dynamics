@@ -40,7 +40,8 @@ void main () {
     vec3 worldSpacePosition = vec3(u_inverseViewMatrix * vec4(viewSpacePosition, 1.0));
 
     // Decode speed and fluid type from the encoded value
-    // encoded = speed + (fluidType * 1000.0)
+    // Format: encodedSpeed = speed + (fluidType * 1000.0)
+    // This matches the encoding in sphere.frag
     float encodedSpeed = data.b;
     float fluidType = floor(encodedSpeed / 1000.0);
     float speed = encodedSpeed - (fluidType * 1000.0);
