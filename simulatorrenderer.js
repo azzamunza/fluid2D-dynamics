@@ -62,8 +62,8 @@ var SimulatorRenderer = (function () {
         this.camera.onMouseUp(event);
     };
 
-    SimulatorRenderer.prototype.reset = function (particlesWidth, particlesHeight, particlePositions, gridSize, gridResolution, particleDensity, sphereRadius) {
-        this.simulator.reset(particlesWidth, particlesHeight, particlePositions, gridSize, gridResolution, particleDensity);
+    SimulatorRenderer.prototype.reset = function (particlesWidth, particlesHeight, particlePositions, particleTypes, gridSize, gridResolution, particleDensity, sphereRadius) {
+        this.simulator.reset(particlesWidth, particlesHeight, particlePositions, particleTypes, gridSize, gridResolution, particleDensity);
         this.renderer.reset(particlesWidth, particlesHeight, sphereRadius);
     }
 
