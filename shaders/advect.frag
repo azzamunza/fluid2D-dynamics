@@ -36,10 +36,14 @@ vec3 sampleVelocity (vec3 position) {
     return vec3(sampleXVelocity(gridPosition), sampleYVelocity(gridPosition), sampleZVelocity(gridPosition));
 }
 
+// Constants for surface tension calculation
+const float MIN_PARTICLE_DISTANCE = 0.01; // Minimum distance to avoid division issues
+const float SURFACE_TENSION_SCALE = 0.01; // Scale factor for surface tension effect
+
 // Sample fluid type and position from nearby particle texture coordinates
 vec4 sampleNearbyParticle(vec2 offset) {
     vec2 sampleCoord = v_coordinates + offset / u_particlesResolution;
-    if (sampleCoord.x < 0.0 || sampleCoord.x > 1.0 || sampleCoord.y < 0.0 || sampleCoord.y > 1.0) {
+    if (sampleCoord.x < 0.0 || sampleCoord.x >= 1.0 || sampleCoord.y < 0.0 || sampleCoord.y >= 1.0) {
         return vec4(-1.0); // Invalid sample
     }
     return texture2D(u_positionsTexture, sampleCoord);
@@ -67,7 +71,7 @@ vec3 computeSurfaceTension(vec3 position, float fluidType) {
                 vec3 toNeighbor = neighborPos - position;
                 float dist = length(toNeighbor);
                 
-                if (dist > 0.01 && dist < interactionRadius) {
+                if (dist > MIN_PARTICLE_DISTANCE && dist < interactionRadius) {
                     // Repulsive force at interface between different fluids
                     vec3 direction = toNeighbor / dist;
                     // Force decreases with distance, creates surface tension effect
@@ -107,7 +111,7 @@ void main () {
     
     // Apply surface tension between the two liquid types
     vec3 surfaceTension = computeSurfaceTension(position, fluidType);
-    step += surfaceTension * u_timeStep * 0.01;
+    step += surfaceTension * u_timeStep * SURFACE_TENSION_SCALE;
 
     //step = clamp(step, -vec3(1.0), vec3(1.0)); //enforce CFL condition
 
