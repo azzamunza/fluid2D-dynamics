@@ -177,10 +177,11 @@ var Simulator = (function () {
 
 
     //expects an array of [x, y, z] particle positions
+    //particleTypes is an array of fluid types (0 = blue, 1 = white)
     //gridSize and gridResolution are both [x, y, z]
 
     //particleDensity is particles per simulation grid cell
-    Simulator.prototype.reset = function (particlesWidth, particlesHeight, particlePositions, gridSize, gridResolution, particleDensity) {
+    Simulator.prototype.reset = function (particlesWidth, particlesHeight, particlePositions, particleTypes, gridSize, gridResolution, particleDensity) {
 
         this.particlesWidth = particlesWidth;
         this.particlesHeight = particlesHeight;
@@ -220,13 +221,15 @@ var Simulator = (function () {
         wgl.bufferData(this.particleVertexBuffer, wgl.ARRAY_BUFFER, particleTextureCoordinates, wgl.STATIC_DRAW);
 
         //generate initial particle positions amd create particle position texture for them
+        // W channel stores fluid type: 0 = blue (full density), 1 = white (half density)
         var particlePositionsData = new Float32Array(this.particlesWidth * this.particlesHeight * 4);
         var particleRandoms = new Float32Array(this.particlesWidth * this.particlesHeight * 4);
         for (var i = 0; i < this.particlesWidth * this.particlesHeight; ++i) {
             particlePositionsData[i * 4] = particlePositions[i][0];
             particlePositionsData[i * 4 + 1] = particlePositions[i][1];
             particlePositionsData[i * 4 + 2] = particlePositions[i][2];
-            particlePositionsData[i * 4 + 3] = 0.0;
+            // Store fluid type in W channel (0 = blue, 1 = white)
+            particlePositionsData[i * 4 + 3] = particleTypes[i];
 
             var theta = Math.random() * 2.0 * Math.PI;
             var u = Math.random() * 2.0 - 1.0;

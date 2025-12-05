@@ -10,7 +10,7 @@ var FluidParticles = (function () {
 
     var GRID_WIDTH = 40,
         GRID_HEIGHT = 20,
-        GRID_DEPTH = 20;
+        GRID_DEPTH = 10;
 
     var PARTICLES_PER_CELL = 10;
 
@@ -64,21 +64,22 @@ var FluidParticles = (function () {
             this.currentPresetIndex = 0;
             this.editedSinceLastPreset = false; //whether the user has edited the last set preset
             var PRESETS = [
-                //dam break
+                //two fluids - blue (left) and white (right)
                 [
-                    new BoxEditor.AABB([0, 0, 0], [15, 20, 20]) 
+                    new BoxEditor.AABB([0, 0, 0], [8, 20, 10]),      // blue fluid (left)
+                    new BoxEditor.AABB([32, 0, 0], [40, 20, 10])     // white fluid (right)
                 ],
 
                 //block drop
                 [
-                    new BoxEditor.AABB([0, 0, 0], [40, 7, 20]),
-                    new BoxEditor.AABB([12, 12, 5], [28, 20, 15]) 
+                    new BoxEditor.AABB([0, 0, 0], [40, 7, 10]),
+                    new BoxEditor.AABB([12, 12, 2], [28, 20, 8]) 
                 ],
 
                 //double splash
                 [
-                    new BoxEditor.AABB([0, 0, 0], [10, 20, 15]),
-                    new BoxEditor.AABB([30, 0, 5], [40, 20, 20]) 
+                    new BoxEditor.AABB([0, 0, 0], [10, 20, 10]),
+                    new BoxEditor.AABB([30, 0, 0], [40, 20, 10]) 
                 ],
 
             ];
@@ -312,6 +313,7 @@ var FluidParticles = (function () {
 
         var particleCount = particlesWidth * particlesHeight;
         var particlePositions = [];
+        var particleTypes = []; // 0 for blue (first box), 1 for white (second box)
         
         var boxEditor = this.boxEditor;
 
@@ -334,6 +336,9 @@ var FluidParticles = (function () {
             for (var j = 0; j < particlesInBox; ++j) {
                 var position = box.randomPoint();
                 particlePositions.push(position);
+                // Fluid type: 0 for first box (blue, full density), 1 for other boxes (white, half density)
+                // This creates two distinct fluid types for visual differentiation
+                particleTypes.push(i === 0 ? 0.0 : 1.0);
             }
 
             particlesCreatedSoFar += particlesInBox;
@@ -351,7 +356,7 @@ var FluidParticles = (function () {
         var gridResolution = [gridResolutionX, gridResolutionY, gridResolutionZ];
 
         var sphereRadius = 7.0 / gridResolutionX;
-        this.simulatorRenderer.reset(particlesWidth, particlesHeight, particlePositions, gridSize, gridResolution, PARTICLES_PER_CELL, sphereRadius);
+        this.simulatorRenderer.reset(particlesWidth, particlesHeight, particlePositions, particleTypes, gridSize, gridResolution, PARTICLES_PER_CELL, sphereRadius);
 
         this.camera.setBounds(0, Math.PI / 2);
     }

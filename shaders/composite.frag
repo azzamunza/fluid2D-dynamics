@@ -39,8 +39,21 @@ void main () {
     vec3 viewSpacePosition = viewRay * -viewSpaceZ;
     vec3 worldSpacePosition = vec3(u_inverseViewMatrix * vec4(viewSpacePosition, 1.0));
 
-    float speed = data.b;
-    vec3 color = hsvToRGB(vec3(max(0.6 - speed * 0.0025, 0.52), 0.75, 1.0));
+    // Decode speed and fluid type from the encoded value
+    // Format: encodedSpeed = speed + (fluidType * 1000.0)
+    // This matches the encoding in sphere.frag
+    float encodedSpeed = data.b;
+    float fluidType = floor(encodedSpeed / 1000.0);
+    float speed = encodedSpeed - (fluidType * 1000.0);
+    
+    vec3 color;
+    if (fluidType > 0.5) {
+        // White fluid (type 1) - half density, white/light gray color
+        color = vec3(0.95, 0.95, 0.98); // White with slight blue tint
+    } else {
+        // Blue fluid (type 0) - full density, blue color
+        color = hsvToRGB(vec3(max(0.6 - speed * 0.0025, 0.52), 0.75, 1.0));
+    }
 
 
     vec4 lightSpacePosition = u_lightProjectionViewMatrix * vec4(worldSpacePosition, 1.0);

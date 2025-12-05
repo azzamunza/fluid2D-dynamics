@@ -16,9 +16,12 @@ uniform float u_sphereRadius;
 varying vec3 v_viewSpacePosition;
 varying vec3 v_viewSpaceNormal;
 varying float v_speed;
+varying float v_fluidType;
 
 void main () {
-    vec3 spherePosition = texture2D(u_positionsTexture, a_textureCoordinates).rgb;
+    vec4 positionData = texture2D(u_positionsTexture, a_textureCoordinates);
+    vec3 spherePosition = positionData.rgb;
+    v_fluidType = positionData.a; // 0 = blue, 1 = white
 
     vec3 position = a_vertexPosition * u_sphereRadius + spherePosition;
 

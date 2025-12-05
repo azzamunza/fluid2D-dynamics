@@ -37,7 +37,10 @@ vec3 sampleVelocity (vec3 position) {
 }
 
 void main () {
-    vec3 position = texture2D(u_positionsTexture, v_coordinates).rgb;
+    vec4 positionData = texture2D(u_positionsTexture, v_coordinates);
+    vec3 position = positionData.rgb;
+    float fluidType = positionData.a; // Preserve fluid type (0 = blue, 1 = white)
+    
     vec3 randomDirection = texture2D(u_randomsTexture, fract(v_coordinates + u_frameNumber / u_particlesResolution)).rgb;
 
     vec3 velocity = sampleVelocity(position);
@@ -55,5 +58,5 @@ void main () {
 
     newPosition = clamp(newPosition, vec3(0.01), u_gridSize - 0.01);
 
-    gl_FragColor = vec4(newPosition, 0.0);
+    gl_FragColor = vec4(newPosition, fluidType);
 }
